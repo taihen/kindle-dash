@@ -1,0 +1,9 @@
+# local configuration and secrets
+config.toml
+files/
+
+# build artefacts
+.venv/
+__pycache__/
+*.pyc
+out/

@@ -1,0 +1,47 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # DejaVu is the renderer's only system dependency; without it PIL dies with
+      # "cannot open resource" instead of anything useful.
+      - run: sudo apt-get update && sudo apt-get install -y fonts-dejavu-core
+      - run: pip install Pillow
+
+      # No config.toml in a clean checkout: load_config falls back to the example
+      # and --demo supplies the data, so this needs no Home Assistant.
+      - name: render the demo panel
+        run: python render.py --demo out/demo.png
+
+      - name: panel is a 600x800 greyscale PNG
+        run: PY=python sh tests/smoke.sh
+
+      - name: every weather glyph exists in the font
+        run: python tests/glyphs.py
+
+      - name: wash schedule logic
+        run: sh tests/wash_due.sh
+
+      - name: device scripts parse
+        run: |
+          # device-side scripts must be POSIX: the Kindle's shell is not bash
+          for f in kindle/dash.sh kindle/dash-main.sh kindle/init.d-dash kindle/install.sh tools/make_payload.sh; do
+            dash -n "$f" && echo "dash ok: $f"
+          done
+          for f in tools/copy_to_kindle.sh tools/flip_kindle_usbnet_mode.sh tools/kindle_usbnet.sh tools/read_kindle_logs.sh tools/usb_update.sh; do
+            bash -n "$f" && echo "bash ok: $f"
+          done
+
+      - name: python parses
+        run: python -m py_compile render.py server.py tools/kindle_sh.py tests/glyphs.py

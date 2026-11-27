@@ -1,0 +1,22 @@
+[Unit]
+Description=kindle-dash: Home Assistant e-ink dashboard renderer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kindle-dash
+Group=kindle-dash
+WorkingDirectory=/opt/kindle-dash
+EnvironmentFile=/etc/kindle-dash.env
+ExecStart=/opt/kindle-dash/.venv/bin/python /opt/kindle-dash/server.py
+Restart=always
+RestartSec=10
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/kindle-dash/out
+
+[Install]
+WantedBy=multi-user.target

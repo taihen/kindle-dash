@@ -1,0 +1,64 @@
+#!/bin/sh
+# /etc/init.d/dash - start the kindle-dash loop at boot (Kindle 4, sysvinit).
+#
+# Install on the device as root:
+#   cp /mnt/us/kindle-dash/init.d-dash /etc/init.d/dash
+#   chmod +x /etc/init.d/dash
+#   mntroot rw
+#   ln -sf /etc/init.d/dash /etc/rcS.d/S99dash      # confirm the rcS.d dir exists first
+#   mntroot ro
+#
+# Then: /etc/init.d/dash start | stop | status | restart
+
+DAEMON=/mnt/us/kindle-dash/dash.sh
+PIDFILE=/var/run/kindle-dash.pid
+
+start() {
+    if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+        echo "kindle-dash already running ($(cat "$PIDFILE"))"
+        return 0
+    fi
+    [ -x "$DAEMON" ] || chmod +x "$DAEMON" 2>/dev/null
+    # rcS runs before the vfat partition is mounted on this firmware, so the
+    # script is not there yet at boot. Wait for it instead of dying silently.
+    (
+        n=0
+        while [ ! -x "$DAEMON" ] && [ "$n" -lt 90 ]; do
+            n=$((n + 1))
+            sleep 2
+        done
+        if [ ! -x "$DAEMON" ]; then
+            echo "$(date) kindle-dash: $DAEMON never appeared" >>/tmp/kindle-dash-boot.log
+            exit 1
+        fi
+        echo "$(date) kindle-dash: starting after ${n} waits" >>/tmp/kindle-dash-boot.log
+        exec "$DAEMON"
+    ) >/dev/null 2>&1 &
+    echo $! >"$PIDFILE"
+    echo "kindle-dash started ($(cat "$PIDFILE"))"
+}
+
+stop() {
+    if [ -f "$PIDFILE" ]; then
+        kill "$(cat "$PIDFILE")" 2>/dev/null
+        rm -f "$PIDFILE"
+    fi
+    # the launcher execs dash-main.sh, so the cmdline is dash-main.sh: match the
+    # directory, not the old script name
+    pkill -f kindle-dash/dash 2>/dev/null
+    echo "kindle-dash stopped"
+}
+
+case "$1" in
+    start)   start ;;
+    stop)    stop ;;
+    restart) stop; sleep 1; start ;;
+    status)
+        if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+            echo "running ($(cat "$PIDFILE"))"
+        else
+            echo "not running"
+        fi
+        ;;
+    *) echo "usage: $0 {start|stop|restart|status}"; exit 1 ;;
+esac

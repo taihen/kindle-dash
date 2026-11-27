@@ -1,0 +1,91 @@
+# kindle-dash example configuration.
+#
+# Copy to config.toml and edit. Everything the panel shows is wired here; no code
+# changes are needed to point it at your own Home Assistant.
+#
+#   cp config.example.toml config.toml
+#
+# The entity ids below are also what `python3 render.py --demo` fakes, so you can
+# render a representative panel before touching Home Assistant at all.
+
+[ha]
+url = "http://homeassistant.local:8123"
+# Token comes from the environment (preferred, systemd EnvironmentFile) or a
+# dotenv file. A long-lived token: HA profile -> Security -> Long-lived tokens.
+token_env = "HASS_TOKEN"
+token_file = "~/.config/kindle-dash/token"
+
+[server]
+bind = "0.0.0.0"
+port = 8099
+refresh_seconds = 300            # the panel asks every 5 min; render at most this often
+png = "out/dash.png"
+browser_height = 780             # the stock Kindle browser loses ~20-60px to its toolbar
+files_dir = "files"              # read-only handoff dir served at /files/
+
+[display]
+width = 600
+height = 800
+rotate = 0                        # 90/180/270 if the panel is mounted sideways
+gray_levels = 16                  # Kindle 4 e-ink supports 16 shades
+number_style = "point"            # point = 1,234.5 · comma = 1 234,5
+timezone = "Europe/Amsterdam"
+footer_name = "living-room"        # right side of the footer; empty = hostname
+locale_days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+locale_months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+# font_dir = "/usr/share/fonts/truetype/dejavu"   # override if DejaVu is elsewhere
+
+[weather]
+entity = "weather.home"
+forecast_days = 5
+
+# Every word on the panel. Swap these for another language.
+[text]
+open = "OPEN"
+doors_closed = "all doors closed"
+feels = "feels"
+today = "today"
+tariff = "tariff"
+sun = "sun"
+sun_setting = "sunset"
+active = "DRAWING NOW"
+idle = "nothing drawing"
+updated = "updated"
+
+[energy]
+label_power = "POWER"
+label_gas = "GAS"
+# Cumulative kWh counters - the renderer diffs them against their value at local
+# midnight, so "today" is right even after a reboot.
+power_today = [
+  "sensor.electricity_meter_tariff_1",
+  "sensor.electricity_meter_tariff_2",
+]
+# Cumulative cost counters (EUR), same midnight diff.
+power_today_cost = [
+  "sensor.electricity_meter_tariff_1_cost",
+  "sensor.electricity_meter_tariff_2_cost",
+]
+gas = "sensor.gas_meter_gas"
+gas_cost = "sensor.gas_meter_gas_cost"
+tariff_state = "sensor.electricity_meter_tariff"   # low | normal
+tariff_labels = { low = "off-peak", normal = "peak" }
+price_low = 0.25
+price_normal = 0.30
+
+# Instantaneous power sensors, biggest few are listed at the bottom of the panel.
+# Keys MUST be quoted: TOML reads `sensor.foo` as a nested table otherwise.
+[consumers]
+"sensor.washer_power" = "Washer/dryer"
+"sensor.fridge_power" = "Fridge"
+"sensor.server_power" = "Server"
+"sensor.office_plug_power" = "Office"
+"sensor.tv_power" = "TV"
+"sensor.living_room_lights_power" = "Living room lights"
+"sensor.garden_plug_power" = "Garden plug"
+
+# Anything `on` here gets an inverse bar under the header, unmissable from 3 m.
+[doors]
+"binary_sensor.front_door" = "Front door"
+"binary_sensor.garden_door" = "Garden door"
+"binary_sensor.garage_door" = "Garage door"
